@@ -3,7 +3,7 @@
 Publishing an icon pack is easy, but you should know these:
 
 ## Prerequisites
-* An icon pack with an manifest in a .cIPack file
+* [An icon pack with an manifest in a .cIPack file](https://github.com/customIcon/customIcons/wiki/Working-with-Icon-Packs-and-cIPackStore)
 * If you are redistributing icons, you need also a permission from the author 
    > There is some exceptions though.
 
