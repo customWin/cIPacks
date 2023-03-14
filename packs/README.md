@@ -10,7 +10,7 @@ Publishing an icon pack is easy, but you should know these:
 ## Steps
 1. Fork this repo
 2. Upload your file in this folder
-3. Add this to the `cIPackStore.json` file:
+3. Add this to the `cIPackStore.json` file in the root directory:
 ```json
 ,{
    "name": "My cool pack",
