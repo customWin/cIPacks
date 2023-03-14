@@ -16,7 +16,7 @@ Publishing an icon pack is easy, but you should know these:
    "name": "My cool pack",
    "description": "This is a cool icon pack that you should use.",
    "author": "jbcarreon123",
-   "icon_author": "jbcarreon123"
+   "icon_author": "jbcarreon123",
    "filename": "my cool pack.cIPack"
 }
 ```
