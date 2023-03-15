@@ -41,7 +41,8 @@ jobs:
       - name: Zip and move pack folder
         run: |
           cd packFolder
-          zip -r "$zipname" "$packname"
+          echo "$zipname $packname"
+          zip -r "$zipname" "$(packname)" -i
           mv "$zipname" ../packs/
           rm -rf "$packname"
         env:
