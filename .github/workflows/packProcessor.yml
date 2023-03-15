@@ -1,71 +1,70 @@
-name: Build and deploy pack
+name: Pack Release
 
 on:
   push:
-    paths:
-      - 'packFolder/**'
+    branches: [ main ]
 
 jobs:
-  build:
+  find_directory:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Find pushed directory
+        id: find_dir
+        run: |
+          DIR="$(find . -type d -name '*' -maxdepth 1 -not -path '*/\.*' | head -1)"
+          echo "::set-output name=dir::$DIR"
 
+  pack_and_delete:
+    needs: find_directory
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Check if the branch is main or not
-      - name: Check if on main branch
+      - name: Get directory path
+        run: echo "Directory path: ${{ needs.find_directory.outputs.dir }}"
+        id: get_dir_path
+
+      - name: Zip pack directory
         run: |
-          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
-            echo "Not on main branch, exiting."
-            exit 0
-          fi
+          cd ${{ needs.find_directory.outputs.dir }}
+          zip -r pack.zip . -x "pack.zip"
+          echo "::set-output name=zip_file::pack.zip"
 
-      # Find the pushed directory
-      - name: Find pushed directory
-        id: find-dir
-        run: |
-          dir=$(find ${{ env.packFolder }} -maxdepth 1 -type d -name "push-*" -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-          echo "::set-output name=dir::$dir"
-        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'Merge')
+      - name: Move pack zip to packs folder
+        run: mv ${{ needs.pack_and_delete.outputs.zip_file }} packs
+        id: move_zip
 
-      # Modify cIPackStore.json
-      - name: Modify cIPacksStore.json
-        if: steps.find-dir.outputs.dir != ''
-        run: |
-          pack_name=$(jq -r '.name' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
-          pack_description=$(jq -r '.description' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
-          pack_author=$(jq -r '.pack_author' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
-          icon_author=$(jq -r '.maker' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
-          filename="${pack_name// /_}.zip"
-          cd ${{ env.packFolder }}
-          zip -r $filename ${{ steps.find-dir.outputs.dir }}
-          mv $filename ../packs
-          rm -rf ${{ steps.find-dir.outputs.dir }}
-          cipacks=()
-          if [ -f cIPacksStore.json ]; then
-            cipacks=$(cat cIPacksStore.json)
-          fi
-          cipacks=$(echo $cipacks | jq --arg pack_name "$pack_name" --arg pack_description "$pack_description" --arg pack_author "$pack_author" --arg icon_author "$icon_author" --arg filename "$filename" '. + [{name: $pack_name, description: $pack_description, author: $pack_author, icon_author: $icon_author, filename: $filename}]')
-          echo $cipacks > cIPacksStore.json
-
-      # Zip the pack
-      - name: Zip pack
-        if: steps.find_directory.outputs.directory != ''
-        run: |
-          cd ${{ steps.find_directory.outputs.directory }}
-          zip -r ../${{ github.sha }}.zip .
-
-      # Upload the zip file
-      - name: Upload pack
-        if: steps.find_directory.outputs.directory != ''
-        uses: actions/upload-artifact@v2
-        with:
-          name: pack
-          path: ${{ github.sha }}.zip
-
-      # Delete the pushed directory
       - name: Delete pushed directory
-        if: steps.find_directory.outputs.directory != ''
+        run: rm -rf ${{ needs.find_directory.outputs.dir }}
+  
+  modify_pack_store:
+    needs: pack_and_delete
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Modify cIPacksStore.json
+        id: modify_pack_store
         run: |
-          rm -rf ${{ steps.find_directory.outputs.directory }}
+          if [ ! -f "cIPacksStore.json" ]; then
+            echo "[]"> cIPacksStore.json
+          fi
+
+          PACK_NAME=$(jq -r '.name' ${{ needs.find_manifest.outputs.manifest_file }})
+          PACK_DESC=$(jq -r '.description' ${{ needs.find_manifest.outputs.manifest_file }})
+          PACK_AUTHOR=$(jq -r '.pack_author' ${{ needs.find_manifest.outputs.manifest_file }})
+          ICON_AUTHOR=$(jq -r '.maker' ${{ needs.find_manifest.outputs.manifest_file }})
+
+          if ! grep -q "$PACK_NAME" cIPacksStore.json; then
+            jq --arg pn "$PACK_NAME" --arg pd "$PACK_DESC" --arg pa "$PACK_AUTHOR" --arg ia "$ICON_AUTHOR" \
+              '. += [{"name": $pn, "description": $pd, "author": $pa, "icon_author": $ia, "filename": $pn + ".zip"}]' \
+              cIPacksStore.json > tmp && mv tmp cIPacksStore.json
+          fi
+
+      - name: Show modified cIPacksStore.json
+        run: cat cIPacksStore.json
