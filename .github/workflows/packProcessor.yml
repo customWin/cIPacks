@@ -31,7 +31,6 @@ jobs:
 
       # Modify cIPackStore.json
       - name: Modify cIPackStore.json
-        if: steps.find_directory.outputs.directory != ''
         run: |
           # Read the cIManifest.json file
           MANIFEST_FILE=$(cat ${{ steps.find_directory.outputs.directory }}/cIManifest.json)
