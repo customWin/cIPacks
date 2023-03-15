@@ -22,23 +22,42 @@ jobs:
             exit 0
           fi
 
-      # Find the directory that was pushed
+      # Find the pushed directory
       - name: Find pushed directory
         id: find_directory
         run: |
           # Get the list of changed files
           CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
 
-          # Find the directory that was pushed
+          # Find the directory that contains the cIManifest.json file
           for file in $CHANGED_FILES; do
-            if [[ $file == packFolder/* && -d $file ]]; then
-              echo "::set-output name=directory::${file}"
+            if [[ $file == packFolder/* && -f $file && ${file##*/} == "cIManifest.json" ]]; then
+              echo "::set-output name=directory::$(dirname $file)"
               break
             fi
           done
 
-      # Zip the directory
-      - name: Zip directory
+      # Modify cIPackStore.json
+      - name: Modify cIPackStore.json
+        if: steps.find_directory.outputs.directory != ''
+        run: |
+          # Read the cIManifest.json file
+          MANIFEST_FILE=$(cat ${{ steps.find_directory.outputs.directory }}/cIManifest.json)
+
+          # Add the pack information to cIPackStore.json
+          PACK_NAME=$(echo $MANIFEST_FILE | jq -r '.name')
+          PACK_DESC=$(echo $MANIFEST_FILE | jq -r '.description')
+          PACK_AUTHOR=$(echo $MANIFEST_FILE | jq -r '.pack_author')
+          ICON_AUTHOR=$(echo $MANIFEST_FILE | jq -r '.maker')
+          FILENAME=${{ github.sha }}.zip
+
+          PACK_JSON=$(echo "{\"name\":\"${PACK_NAME}\",\"description\":\"${PACK_DESC}\",\"author\":\"${PACK_AUTHOR}\",\"icon_author\":\"${ICON_AUTHOR}\",\"filename\":\"${FILENAME}\"}")
+
+          echo $PACK_JSON | jq -r '. as $item | [ inputs | . + $item ]' /cIPackStore.json > /tmp/cIPackStore.json
+          mv /tmp/cIPackStore.json /cIPackStore.json
+
+      # Zip the pack
+      - name: Zip pack
         if: steps.find_directory.outputs.directory != ''
         run: |
           cd ${{ steps.find_directory.outputs.directory }}
