@@ -35,6 +35,7 @@ jobs:
               echo "$(dirname $file)"
               break
             fi
+            echo "$(file)"
           done
 
       # Modify cIPackStore.json
