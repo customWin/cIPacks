@@ -1,0 +1,59 @@
+name: Build and deploy pack
+
+on:
+  push:
+    paths:
+      - 'packFolder/**'
+    if: github.event.repository.fork == 'false'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Check if the branch is main or not
+      - name: Check if on main branch
+        run: |
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "Not on main branch, exiting."
+            exit 0
+          fi
+
+      # Find the directory that was pushed
+      - name: Find pushed directory
+        id: find_directory
+        run: |
+          # Get the list of changed files
+          CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
+
+          # Find the directory that was pushed
+          for file in $CHANGED_FILES; do
+            if [[ $file == packFolder/* && -d $file ]]; then
+              echo "::set-output name=directory::${file}"
+              break
+            fi
+          done
+
+      # Zip the directory
+      - name: Zip directory
+        if: steps.find_directory.outputs.directory != ''
+        run: |
+          cd ${{ steps.find_directory.outputs.directory }}
+          zip -r ../${{ github.sha }}.zip .
+
+      # Upload the zip file
+      - name: Upload pack
+        if: steps.find_directory.outputs.directory != ''
+        uses: actions/upload-artifact@v2
+        with:
+          name: pack
+          path: ${{ github.sha }}.zip
+
+      # Delete the pushed directory
+      - name: Delete pushed directory
+        if: steps.find_directory.outputs.directory != ''
+        run: |
+          rm -rf ${{ steps.find_directory.outputs.directory }}
