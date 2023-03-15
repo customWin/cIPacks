@@ -45,7 +45,7 @@ jobs:
           mv "$zipname" ../packs/
           rm -rf "$packname"
         env:
-          zipname: "$packname.zip"
+          zipname: "($packname).zip"
           packname: "${{ steps.find_dir.outputs.dir }}"
 
   update_packs_store:
