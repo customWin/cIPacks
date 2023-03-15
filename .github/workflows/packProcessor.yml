@@ -1,64 +1,72 @@
-name: Update cIPacksStore.json
+name: Build and Deploy Packs
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - "packFolder/**"
 
 env:
-  PACK_FOLDER: 'packFolder'
-  PACKS_STORE_FILE: 'cIPacksStore.json'
+  packsStoreFile: "cIPacksStore.json"
 
 jobs:
-  find-directory:
+  build_pack:
     runs-on: ubuntu-latest
-    outputs:
-      directory: ${{ steps.find_directory.outputs.directory }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Find pushed directory
-        id: find_directory
-        run: |
-          echo "::set-output name=directory::$(find $PACK_FOLDER -maxdepth 1 -type d -printf '%T@ %p\n' | sort -k1 -nr | cut -d" " -f2- | head -1)"
-    
-  zip-directory:
-    needs: find-directory
-    runs-on: ubuntu-latest
-    outputs:
-      zip-file: ${{ steps.zip_directory.outputs.zip_file }}
-    steps:
-      - name: Setup Python
-        uses: actions/setup-python@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2.4.4
         with:
-          python-version: '3.9'
+          node-version: "14.x"
 
-      - name: Zip directory
-        id: zip_directory
+      - name: Install Dependencies
         run: |
-          cd ${{ needs.find-directory.outputs.directory }}
-          zip -r ../$PACKS_STORE_FILE.zip .
-          echo "::set-output name=zip_file::$PACKS_STORE_FILE.zip"
+          cd packFolder
+          npm install
 
-  modify-manifest:
-    needs: find-directory
+      - name: Find pushed directory
+        id: find_dir
+        run: |
+          echo "::set-output name=dir::$(basename $(dirname $(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -m1 'packFolder/')))"
+        shell: bash
+
+      - name: Get pack name
+        id: pack_name
+        run: |
+          echo "::set-output name=packname::$(jq -r '.name' packFolder/${{ steps.find_dir.outputs.dir }}/cIManifest.json)"
+        shell: bash
+
+      - name: Zip and move pack folder
+        run: |
+          cd packFolder
+          zip -r "$zipname" "$packname"
+          mv "$zipname" ../packs/
+          rm -rf "$packname"
+        env:
+          zipname: "$packname.zip"
+          packname: "${{ steps.find_dir.outputs.dir }}"
+
+  update_packs_store:
     runs-on: ubuntu-latest
-    env:
-      MANIFEST_FILE: 'cIManifest.json'
+    needs: build_pack
     steps:
-      - name: Check if manifest exists
-        id: check_manifest
-        run: |
-          if [[ -f "${{ needs.find-directory.outputs.directory }}/$MANIFEST_FILE" ]]; then
-            echo "::set-output name=manifest_found::true"
-          else
-            echo "::set-output name=manifest_found::false"
-          fi
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Modify cIPacksStore.json
-        if: ${{ needs.modify-manifest.outputs.manifest_found == 'true' }}
+      - name: Get pack data
+        id: pack_data
         run: |
-          cd $GITHUB_WORKSPACE
-          jq --arg pack "$(cat ${{ needs.find-directory.outputs.directory }}/$MANIFEST_FILE)" '. += [{"name": $pack.name, "description": $pack.description, "author": $pack.pack_author, "icon_author": $pack.maker, "filename": "${{ steps.zip_directory.outputs.zip_file }}" }]' $PACKS_STORE_FILE > $PACKS_STORE_FILE.new
-          mv $PACKS_STORE_FILE.new $PACKS_STORE_FILE
+          echo "::set-output name=packdata::$(jq -r ".[] | select(.name == \"${{ needs.build_pack.outputs.packname }}\") | {name: .name, description: .description, author: .pack_author, icon_author: .maker, filename: \"${{ needs.build_pack.outputs.packname }}.zip\"}" ${env.packsStoreFile})"
+        env:
+          packsStoreFile: ${{ env.packsStoreFile }}
+
+      - name: Update packs store
+        uses: gr2m/create-or-update-file@v2.6.0
+        with:
+          path: ${{ env.packsStoreFile }}
+          message: "Add pack ${{ needs.build_pack.outputs.packname }}"
+          content: "${{ steps.pack_data.outputs.packdata }}"
+          updater: github-actions
+          update_method: replace
