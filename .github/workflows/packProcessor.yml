@@ -30,22 +30,24 @@ jobs:
         if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'Merge')
 
       # Modify cIPackStore.json
-      - name: Modify cIPackStore.json
+      - name: Modify cIPacksStore.json
+        if: steps.find-dir.outputs.dir != ''
         run: |
-          # Read the cIManifest.json file
-          MANIFEST_FILE=$(cat ${{ steps.find_directory.outputs.directory }}/cIManifest.json)
-
-          # Add the pack information to cIPackStore.json
-          PACK_NAME=$(echo $MANIFEST_FILE | jq -r '.name')
-          PACK_DESC=$(echo $MANIFEST_FILE | jq -r '.description')
-          PACK_AUTHOR=$(echo $MANIFEST_FILE | jq -r '.pack_author')
-          ICON_AUTHOR=$(echo $MANIFEST_FILE | jq -r '.maker')
-          FILENAME=${{ github.sha }}.zip
-
-          PACK_JSON=$(echo "{\"name\":\"${PACK_NAME}\",\"description\":\"${PACK_DESC}\",\"author\":\"${PACK_AUTHOR}\",\"icon_author\":\"${ICON_AUTHOR}\",\"filename\":\"${FILENAME}\"}")
-
-          echo $PACK_JSON | jq -r '. as $item | [ inputs | . + $item ]' /cIPackStore.json > /tmp/cIPackStore.json
-          mv /tmp/cIPackStore.json /cIPackStore.json
+          pack_name=$(jq -r '.name' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
+          pack_description=$(jq -r '.description' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
+          pack_author=$(jq -r '.pack_author' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
+          icon_author=$(jq -r '.maker' ${{ steps.find-dir.outputs.dir }}/cIManifest.json)
+          filename="${pack_name// /_}.zip"
+          cd ${{ env.packFolder }}
+          zip -r $filename ${{ steps.find-dir.outputs.dir }}
+          mv $filename ../packs
+          rm -rf ${{ steps.find-dir.outputs.dir }}
+          cipacks=()
+          if [ -f cIPacksStore.json ]; then
+            cipacks=$(cat cIPacksStore.json)
+          fi
+          cipacks=$(echo $cipacks | jq --arg pack_name "$pack_name" --arg pack_description "$pack_description" --arg pack_author "$pack_author" --arg icon_author "$icon_author" --arg filename "$filename" '. + [{name: $pack_name, description: $pack_description, author: $pack_author, icon_author: $icon_author, filename: $filename}]')
+          echo $cipacks > cIPacksStore.json
 
       # Zip the pack
       - name: Zip pack
