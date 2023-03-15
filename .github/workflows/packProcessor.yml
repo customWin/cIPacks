@@ -1,81 +1,60 @@
-name: Pack Builder
+name: Build pack
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'packFolder/**'
-      - '.github/workflows/**'
-    # Only run if the push is not from a forked repository
-    # This is a new feature in v2
-    # See: https://github.blog/changelog/2021-08-23-github-actions-skip-pull-request-and-forked-workflow-runs-by-default/
-    if: "!github.event.repository.fork"
-
-env:
-  PACKS_DIR: ./packs
-  CI_MANIFEST_FILE: cIManifest.json
-  CI_PACKS_STORE_FILE: cIPacksStore.json
+    branches:
+      - main
 
 jobs:
-  # Build the pack and add it to the packs directory
-  build_pack:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - uses: actions/checkout@v2
 
-      - name: Find pushed directory
-        id: find_directory
-        run: |
-          cd $GITHUB_WORKSPACE/packFolder
-          echo ::set-output name=dir::$(find . -type d -maxdepth 1 -mindepth 1 | head -1)
+    - name: Find pushed directory
+      id: find_pushed_dir
+      run: |
+        cd packFolder
+        echo "::set-output name=pushed_dir::$(find . -type d -name ".git" -prune -o -print | sed -n '2 p' | cut -d'/' -f2)"
 
-      - name: Zip pack directory
-        id: zip_directory
-        run: |
-          cd $GITHUB_WORKSPACE/packFolder
-          zip -r ${{ env.PACKS_DIR }}/${{ steps.find_directory.outputs.dir }}.zip ${{ steps.find_directory.outputs.dir }}
-        shell: bash
+    - name: Get pack name and version from manifest
+      id: get_pack_info
+      run: |
+        PACK_DIR="./packFolder/${{ steps.find_pushed_dir.outputs.pushed_dir }}"
+        PACK_MANIFEST="${PACK_DIR}/cIManifest.json"
+        echo "::set-output name=pack_name::$(jq -r '.name' "${PACK_MANIFEST}")"
+        echo "::set-output name=pack_version::$(jq -r '.version' "${PACK_MANIFEST}")"
 
-      - name: Delete pack directory
-        run: rm -rf $GITHUB_WORKSPACE/packFolder/${{ steps.find_directory.outputs.dir }}
-        shell: bash
+    - name: Create packs directory if it doesn't exist
+      run: mkdir -p packs
 
-  # Modify the cIPacksStore.json file
-  modify_cipacksstore:
-    needs: build_pack
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Create pack zip file
+      run: |
+        PACK_DIR="./packFolder/${{ steps.find_pushed_dir.outputs.pushed_dir }}"
+        PACK_NAME="${{ steps.get_pack_info.outputs.pack_name }}"
+        PACK_VERSION="${{ steps.get_pack_info.outputs.pack_version }}"
+        ZIP_NAME="cI.${PACK_NAME}-${PACK_VERSION}.zip"
+        cd "${PACK_DIR}"
+        zip -r "../../packs/${ZIP_NAME}" .
+        cd ..
+        rm -rf "${PACK_DIR}"
+        echo "::set-output name=zip_file::packs/${ZIP_NAME}"
 
-      - name: Find cIManifest.json file
-        id: find_manifest
-        run: |
-          cd $GITHUB_WORKSPACE/packFolder/${{ steps.build_pack.outputs.find_directory }}
-          echo ::set-output name=file::$(find . -type f -name ${{ env.CI_MANIFEST_FILE }} | head -1 | sed 's|./||')
+    - name: Modify cIPacksStore.json
+      if: success()
+      uses: Grifonas/cIManifest-to-cIPacksStore@v1
+      with:
+        fileName: "${{ steps.get_pack_info.outputs.pack_name }}"
+        fileDescription: "${{ steps.get_pack_info.outputs.pack_description }}"
+        fileAuthor: "${{ steps.get_pack_info.outputs.pack_author }}"
+        fileIconAuthor: "${{ steps.get_pack_info.outputs.maker }}"
+        filename: "${{ steps.get_pack_info.outputs.zip_file }}"
 
-      - name: Read cIManifest.json file
-        id: read_manifest
-        uses: azure/cli@v1
-        with:
-          azcliversion: 2.0.72
-          inlineScript: |
-            content=$(cat ${{ steps.find_manifest.outputs.file }})
-            echo ::set-output name=data::$content
-
-      - name: Check if pack already exists
-        id: check_pack_exists
-        run: |
-          pack_exists=$(jq --arg name "${{ fromJson(steps.read_manifest.outputs.data).name }}" '.[] | select(.name == $name)' ${{ env.CI_PACKS_STORE_FILE }})
-          if [ ! -z "$pack_exists" ]; then
-            echo "Pack already exists in ${{ env.CI_PACKS_STORE_FILE }}. Skipping..."
-            exit 78
-          fi
-        shell: bash
-
-      - name: Update cIPacksStore.json file
-        if: ${{ steps.check_pack_exists.outcome != 'skipped' }}
-        run: |
-          jq --argjson data "${{ fromJson(steps.read_manifest.outputs.data) }}" '. += [$data]' ${{ env.CI_PACKS_STORE_FILE }} | sponge ${{ env.CI_PACKS_STORE_FILE }}
-        shell: bash
+    - name: Commit changes
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add cIPacksStore.json
+        git commit -m "Update cIPacksStore.json with new pack"
