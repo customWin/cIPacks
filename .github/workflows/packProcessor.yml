@@ -1,60 +1,81 @@
-name: Build pack
-
+name: Pack Processor
 on:
   push:
-    branches:
-      - main
-
+    branches: [ main ]
+    paths:
+      - "${{ env.packFolder }}/**/cIManifest.json"
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Find pushed directory
-      id: find_pushed_dir
-      run: |
-        cd packFolder
-        echo "::set-output name=pushed_dir::$(find . -type d -name ".git" -prune -o -print | sed -n '2 p' | cut -d'/' -f2)"
+      - name: Set up Node.js
+        uses: actions/setup-node@v2.4.2
+        with:
+          node-version: '14.x'
 
-    - name: Get pack name and version from manifest
-      id: get_pack_info
-      run: |
-        PACK_DIR="./packFolder/${{ steps.find_pushed_dir.outputs.pushed_dir }}"
-        PACK_MANIFEST="${PACK_DIR}/cIManifest.json"
-        echo "::set-output name=pack_name::$(jq -r '.name' "${PACK_MANIFEST}")"
-        echo "::set-output name=pack_version::$(jq -r '.version' "${PACK_MANIFEST}")"
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install -g yarn
 
-    - name: Create packs directory if it doesn't exist
-      run: mkdir -p packs
+      - name: Find pushed directory
+        id: findDirectory
+        run: |
+          echo "::set-output name=directory::$(dirname $(find ${{ env.packFolder }} -name cIManifest.json -print -quit))"
 
-    - name: Create pack zip file
-      run: |
-        PACK_DIR="./packFolder/${{ steps.find_pushed_dir.outputs.pushed_dir }}"
-        PACK_NAME="${{ steps.get_pack_info.outputs.pack_name }}"
-        PACK_VERSION="${{ steps.get_pack_info.outputs.pack_version }}"
-        ZIP_NAME="cI.${PACK_NAME}-${PACK_VERSION}.zip"
-        cd "${PACK_DIR}"
-        zip -r "../../packs/${ZIP_NAME}" .
-        cd ..
-        rm -rf "${PACK_DIR}"
-        echo "::set-output name=zip_file::packs/${ZIP_NAME}"
+      - name: Read cIManifest.json
+        id: readManifest
+        run: |
+          echo "::set-output name=manifest::$(cat ${{ steps.findDirectory.outputs.directory }}/cIManifest.json)"
 
-    - name: Modify cIPacksStore.json
-      if: success()
-      uses: Grifonas/cIManifest-to-cIPacksStore@v1
-      with:
-        fileName: "${{ steps.get_pack_info.outputs.pack_name }}"
-        fileDescription: "${{ steps.get_pack_info.outputs.pack_description }}"
-        fileAuthor: "${{ steps.get_pack_info.outputs.pack_author }}"
-        fileIconAuthor: "${{ steps.get_pack_info.outputs.maker }}"
-        filename: "${{ steps.get_pack_info.outputs.zip_file }}"
+      - name: Extract pack name from manifest
+        id: extractPackName
+        run: |
+          echo "::set-output name=packName::$(echo ${{ steps.readManifest.outputs.manifest }} | jq -r '.name')"
 
-    - name: Commit changes
-      if: success()
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add cIPacksStore.json
-        git commit -m "Update cIPacksStore.json with new pack"
+      - name: Extract pack description from manifest
+        id: extractPackDescription
+        run: |
+          echo "::set-output name=packDescription::$(echo ${{ steps.readManifest.outputs.manifest }} | jq -r '.description')"
+
+      - name: Extract pack author from manifest
+        id: extractPackAuthor
+        run: |
+          echo "::set-output name=packAuthor::$(echo ${{ steps.readManifest.outputs.manifest }} | jq -r '.pack_author')"
+
+      - name: Extract icon author from manifest
+        id: extractIconAuthor
+        run: |
+          echo "::set-output name=iconAuthor::$(echo ${{ steps.readManifest.outputs.manifest }} | jq -r '.maker')"
+
+      - name: Generate filename
+        id: generateFilename
+        run: |
+          echo "::set-output name=filename::${{ steps.extractPackName.outputs.packName }}.zip"
+
+      - name: Create zip file
+        id: createZipFile
+        run: |
+          cd ${{ steps.findDirectory.outputs.directory }}
+          zip -r ../${{ steps.generateFilename.outputs.filename }} .
+
+      - name: Upload zip file
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.generateFilename.outputs.filename }}
+          path: ./packs/${{ steps.generateFilename.outputs.filename }}
+
+      - name: Update cIPacksStore.json
+        if: ${{ github.event_name == 'push' && !github.event.repository.fork }}
+        run: |
+          cd ${{ github.workspace }}
+          if ! test -f "cIPacksStore.json"; then
+            echo '[]' > cIPacksStore.json
+          fi
+
+          packName=$(jq -r '.name' ${{ steps.findDirectory.outputs.directory }}/cIManifest.json)
+          packDescription=$(jq -r '.description' ${{ steps.findDirectory.outputs.directory }}/cIManifest.json)
+          packAuthor=$(jq -r '.pack_author' ${{ steps.findDirectory.outputs.directory }}/cIManifest.json)
