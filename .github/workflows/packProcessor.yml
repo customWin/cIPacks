@@ -32,10 +32,10 @@ jobs:
           echo "::set-output name=dir::$(basename $(dirname $(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -m1 'packFolder/')))"
         shell: bash
 
-      - name: Get pack name
-        id: pack_name
+      - name: Get pack data
+        id: pack_data
         run: |
-          echo "::set-output name=packname::$(jq -r '.name' packFolder/${{ steps.find_dir.outputs.dir }}/cIManifest.json)"
+          echo "::set-output name=packdata::$(jq -r ".[] | select(.name == \"${{ needs.build_pack.outputs.name }}\") | {name: .name, description: .description, author: .pack_maker, icon_author: .author, filename: \"${{ needs.build_pack.outputs.name }}.cIPack\"}" ${env.packsStoreFile})"
         shell: bash
 
       - name: Zip and move pack folder
