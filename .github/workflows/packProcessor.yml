@@ -38,11 +38,15 @@ jobs:
         shell: bash
 
       - name: Zip and move pack folder
+        working-directory: packFolder
         run: |
-          cd packFolder
-          zip -r "${{ steps.build_pack.outputs.packname }}.cIPack" "$(basename ${{ steps.build_pack.outputs.packname }})" -i "*"
-          mv "${{ steps.build_pack.outputs.packname }}.cIPack" ../packs/
-          rm -rf "$(basename ${{ steps.build_pack.outputs.packname }})"
+          echo "$zipname $name"
+          zip -r "$zipname" "$name" -i "*"
+          mv "$zipname" ../packs/
+          rm -rf "$name"
+        env:
+          zipname: "$name.cIPack"
+          name: "${{ steps.find_dir.outputs.dir }}"
 
       - name: Append pack data to packs store
         id: append_data
