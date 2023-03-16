@@ -62,25 +62,8 @@ jobs:
           packsStoreFile: ${{ env.packsStoreFile }}
 
       - name: Set up packDir environment variable
-        run: echo "packDir=packDir" >> $GITHUB_ENV
+        run: echo "packDir=/packDir" >> $GITHUB_ENV
       
       - name: Move pack directory
         run: |
-          mv packFolder "${{ env.packDir }}"
-
-  update_packs_store:
-    runs-on: ubuntu-latest
-    needs: build_pack
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Create or update packs store file
-        uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          FILEPATH: ${{ env.packsStoreFile }}
-          RELEASE_NAME: "Update packs store"
-          RELEASE_BODY: "Add pack ${{ needs.build_pack.outputs.packname }}"
-          TAG_NAME: "v1"
-          COMMIT_MESSAGE: "Add pack ${{ needs.build_pack.outputs.packname }}"
+          mv $packname "${{ env.packDir }}"
