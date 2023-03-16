@@ -40,11 +40,9 @@ jobs:
       - name: Zip and move pack folder
         run: |
           cd packFolder
-          zip -r "${{ steps.find_dir.outputs.dir }}.cIPack" "./${{ steps.find_dir.outputs.dir }}" -i
-          mv "${{ steps.find_dir.outputs.dir }}.cIPack" ../packs/
-          rm -rf "${{ steps.find_dir.outputs.dir }}"
-        env:
-          zipname: "${{ steps.find_dir.outputs.dir }}.cIPack"
+          zip -r "${{ steps.build_pack.outputs.packname }}.cIPack" "$(basename ${{ steps.build_pack.outputs.packname }})" -i "*"
+          mv "${{ steps.build_pack.outputs.packname }}.cIPack" ../packs/
+          rm -rf "$(basename ${{ steps.build_pack.outputs.packname }})"
 
       - name: Append pack data to packs store
         id: append_data
