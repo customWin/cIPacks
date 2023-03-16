@@ -10,55 +10,33 @@ env:
   packDir: "packs"
 
 jobs:
-  build_pack:
+  build_and_deploy_pack:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && contains(github.event.paths, 'packFolder/') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "14.x"
-
-      - name: Install Dependencies
+      
+      - name: Check for pack folder changes
+        id: check_for_pack_changes
         run: |
-          cd packFolder
-          npm install
-
-      - name: Get pack name
-        id: pack_name
-        run: |
-          echo "::set-output name=packname::$(jq -r '.name' packFolder/cIManifest.json)"
+          echo "::set-output name=pack_folder_changed::$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -q 'packFolder/' && echo true || echo false)"
         shell: bash
-
-      - name: Zip and move pack folder
-        run: |
-          cd packFolder
-          zip -r "${{ env.packDir }}/${{ steps.pack_name.outputs.packname }}.cIPack" ./*
-          mv "${{ steps.pack_name.outputs.packname }}" "${{ env.packDir }}/"
+      
+      - name: Build and deploy pack
+        if: steps.check_for_pack_changes.outputs.pack_folder_changed == 'true'
         env:
           packDir: ${{ env.packDir }}
-
-  update_packs_store:
-    runs-on: ubuntu-latest
-    needs: build_pack
-    if: ${{ needs.build_pack.result == 'success' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Get pack data
-        id: pack_data
         run: |
-          echo "::set-output name=packdata::$(jq -n --arg name "${{ needs.build_pack.outputs.packname }}" --arg author "$(jq -r '.pack_author' packFolder/cIManifest.json)" --arg icon_author "$(jq -r '.maker' packFolder/cIManifest.json)" --arg desc "$(jq -r '.description' packFolder/cIManifest.json)" '{name: $name, description: $desc, author: $author, icon_author: $icon_author, filename: ($name + ".cIPack")}')"
-        
-      - name: Update packs store
-        uses: gr2m/create-or-update-file@v2.6.0
-        with:
-          path: ${{ env.packsStoreFile }}
-          message: "Add pack ${{ needs.build_pack.outputs.packname }}"
-          content: "${{ steps.pack_data.outputs.packdata }}"
-          updater: github-actions
-          update_method: append
+          cd packFolder
+          packname="$(jq -r '.name' cIManifest.json)"
+          zipname="$packname.cIPack.zip"
+          zip -r "$zipname" ./*
+          mv "$zipname" ../${{ env.packDir }}/$packname.cIPack
+          cd ..
+          rm -rf packFolder
+          pack_author="$(jq -r '.pack_author' packDir/$packname/cIManifest.json)"
+          icon_author="$(jq -r '.maker' packDir/$packname/cIManifest.json)"
+          description="$(jq -r '.description' packDir/$packname/cIManifest.json)"
+          filename="$packname.cIPack"
+          echo "{\"name\":\"$packname\",\"description\":\"$description\",\"author\":\"$pack_author\",\"icon_author\":\"$icon_author\",\"filename\":\"$filename\"}" >> ${{ env.packsStoreFile }}
+          echo "Added pack $packname to ${{ env.packsStoreFile }}"
