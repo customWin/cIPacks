@@ -62,7 +62,7 @@ jobs:
           packsStoreFile: ${{ env.packsStoreFile }}
 
       - name: Set up packDir environment variable
-        run: echo "packDir=packs" >> $GITHUB_ENV
+        run: echo "packDir=packDir" >> $GITHUB_ENV
       
       - name: Move pack directory
         run: |
@@ -77,8 +77,8 @@ jobs:
 
       - name: Create or update packs store file
         uses: marvinpinto/action-automatic-releases@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           FILEPATH: ${{ env.packsStoreFile }}
           RELEASE_NAME: "Update packs store"
           RELEASE_BODY: "Add pack ${{ needs.build_pack.outputs.packname }}"
