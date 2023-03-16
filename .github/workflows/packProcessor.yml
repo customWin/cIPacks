@@ -43,7 +43,7 @@ jobs:
           cd packFolder
           packname="${{ steps.find_dir.outputs.dir }}"
           zipname="$packname.cIPack"
-          zip -r "$zipname" "$packname" -i
+          zip -r "$zipname" "$packname"
           mv "$zipname" ../packs/
           rm -rf "$packname"
 
