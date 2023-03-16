@@ -2,12 +2,12 @@ name: Build and Deploy Packs
 
 on:
   push:
+    branches: [ main ]
     paths:
       - "packFolder/**"
 
 env:
-  packsStoreFile: "cIPacksStore.json"
-  packDir: "packs"
+  PACKS_STORE_FILE: "cIPacksStore.json"
 
 jobs:
   build_and_deploy_pack:
@@ -15,28 +15,55 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      
-      - name: Check for pack folder changes
-        id: check_for_pack_changes
-        run: |
-          echo "::set-output name=pack_folder_changed::$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -q 'packFolder/' && echo true || echo false)"
-        shell: bash
-      
-      - name: Build and deploy pack
-        if: steps.check_for_pack_changes.outputs.pack_folder_changed == 'true'
-        env:
-          packDir: ${{ env.packDir }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "14.x"
+
+      - name: Install Dependencies
         run: |
           cd packFolder
-          packname="$(jq -r '.name' cIManifest.json)"
-          zipname="$packname.cIPack.zip"
-          zip -r "$zipname" ./*
-          mv "$zipname" ../${{ env.packDir }}/$packname.cIPack
-          cd ..
-          rm -rf packFolder
-          pack_author="$(jq -r '.pack_author' packDir/$packname/cIManifest.json)"
-          icon_author="$(jq -r '.maker' packDir/$packname/cIManifest.json)"
-          description="$(jq -r '.description' packDir/$packname/cIManifest.json)"
-          filename="$packname.cIPack"
-          echo "{\"name\":\"$packname\",\"description\":\"$description\",\"author\":\"$pack_author\",\"icon_author\":\"$icon_author\",\"filename\":\"$filename\"}" >> ${{ env.packsStoreFile }}
-          echo "Added pack $packname to ${{ env.packsStoreFile }}"
+          npm install
+
+      - name: Find pushed directory
+        id: find_dir
+        run: |
+          echo "DIR=$(basename $(dirname $(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -m1 'packFolder/')))" >> $GITHUB_ENV
+
+      - name: Get pack name
+        id: pack_name
+        run: |
+          PACK_NAME=$(jq -r '.name' packFolder/${{ env.DIR }}/cIManifest.json)
+          echo "PACK_NAME=${PACK_NAME}" >> $GITHUB_ENV
+
+      - name: Zip and move pack folder
+        run: |
+          cd packFolder
+          ZIP_NAME="${PACK_NAME}.cIPack"
+          zip -r "${ZIP_NAME}" "${PACK_NAME}" -i
+          mv "${ZIP_NAME}" ../packs/
+          rm -rf "${PACK_NAME}"
+          echo "PACK_FILENAME=${ZIP_NAME}" >> $GITHUB_ENV
+
+      - name: Update packs store
+        uses: gr2m/create-or-update-file@v2.6.0
+        with:
+          path: ${{ env.PACKS_STORE_FILE }}
+          message: "Add pack ${{ env.PACK_NAME }}"
+          content: |
+            [
+              {
+                "name": "${{ env.PACK_NAME }}",
+                "description": "$(jq -r '.description' packFolder/${{ env.DIR }}/cIManifest.json)",
+                "author": "$(jq -r '.pack_author' packFolder/${{ env.DIR }}/cIManifest.json)",
+                "icon_author": "$(jq -r '.maker' packFolder/${{ env.DIR }}/cIManifest.json)",
+                "filename": "${{ env.PACK_FILENAME }}"
+              }
+            ]
+          updater: github-actions
+          update_method: replace
+
+      - name: Move pack directory
+        run: |
+          mv packFolder packDir/${{ env.DIR }}
