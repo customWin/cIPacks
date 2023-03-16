@@ -29,8 +29,7 @@ jobs:
       - name: Find pushed directory
         id: find_dir
         run: |
-          echo "::set-output name=dir::$(basename $(dirname $(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -m1 'packFolder/')))"
-        shell: bash
+          echo "::set-output name=dir::$(find packFolder -type d -name 'cI.*' -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2 | xargs basename)"
 
       - name: Get pack data
         id: pack_data
@@ -41,15 +40,11 @@ jobs:
       - name: Zip and move pack folder
         run: |
           cd packFolder
-          echo "zipname=$zipname"
-          echo "packname=$packname"
-          ls -R
-          zip -r "$zipname" "$packname" -i "*.json"
-          mv "$zipname" ../packs/
-          rm -rf "$packname"
+          zip -r "${{ steps.find_dir.outputs.dir }}.cIPack" "./${{ steps.find_dir.outputs.dir }}" -i
+          mv "${{ steps.find_dir.outputs.dir }}.cIPack" ../packs/
+          rm -rf "${{ steps.find_dir.outputs.dir }}"
         env:
-          zipname: "$packname.cIPack"
-          packname: "${{ steps.find_dir.outputs.dir }}"
+          zipname: "${{ steps.find_dir.outputs.dir }}.cIPack"
 
       - name: Append pack data to packs store
         id: append_data
