@@ -45,4 +45,6 @@ jobs:
 
       - name: Valid PR
         if: ${{ !steps.pr_closed_by_workflow.outputs.result && (github.actor == github.event.pull_request.user.login || contains(github.event.pull_request.requested_reviewers.*.login, github.actor) || contains(github.event.pull_request.requested_teams.*.slug, concat(github.repository.owner.login, "/", github.event.pull_request.base.ref, "/", "moderators"))) }}
-       
+        run: |
+          echo "The PR is valid."  
+        continue-on-error: true
