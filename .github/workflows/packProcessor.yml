@@ -67,6 +67,9 @@ jobs:
           zipname: "$name.cIPack"
           name: "${{ steps.find_dir.outputs.dir }}"
 
+      - name: Pull changes
+        run: git pull
+
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
