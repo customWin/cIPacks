@@ -62,8 +62,9 @@ jobs:
           packsStoreFile: ${{ env.packsStoreFile }}
 
       - name: Set up packDir environment variable
-        run: echo "packDir=/packDir" >> $GITHUB_ENV
+        run: echo "packDir=packDir" >> $GITHUB_ENV
       
       - name: Move pack directory
         run: |
+          echo $packname
           mv $packname "${{ env.packDir }}"
