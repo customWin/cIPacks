@@ -6,6 +6,8 @@ on:
 
 jobs:
   validate-pr:
+    env:
+      GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
