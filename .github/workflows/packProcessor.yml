@@ -49,12 +49,13 @@ jobs:
           description=$(jq -r '.description' "$manifest_file")
           pack_file="$packname.cIPack"
           new_data="{\"name\":\"$packname\",\"description\":\"$description\",\"author\":\"$pack_author\",\"icon_author\":\"$icon_author\",\"filename\":\"$pack_file\"}"
-          echo "$new_data" >> "$GITHUB_WORKSPACE/$env.packsStoreFile"
+          manifest=$(cat "$GITHUB_WORKSPACE/cIPackStore.json")|sed 's/.$//'
+          echo "$(manifest), $(new_data)]" > "$GITHUB_WORKSPACE/cIPackStore.json"
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
 
       - name: Set up packDir environment variable
-        run: echo "packDir=..\packDir" >> $GITHUB_ENV
+        run: echo "packDir=../packDir" >> $GITHUB_ENV
 
       - name: Zip and move pack folder
         working-directory: packFolder
@@ -62,7 +63,7 @@ jobs:
           echo "$zipname $name"
           zip -r "$zipname" "$name" -i "*"
           mv "$zipname" ../packs/
-          mv "$name" "$packDir"
+          mv "$name" "$(packDir)/$name"
         env:
           zipname: "$name.cIPack"
           name: "${{ steps.find_dir.outputs.dir }}"
