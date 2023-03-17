@@ -68,7 +68,7 @@ jobs:
           name: "${{ steps.find_dir.outputs.dir }}"
 
       - name: Pull changes
-        run: git pull
+        run: git pull origin iconPackChanges
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
