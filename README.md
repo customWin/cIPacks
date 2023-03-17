@@ -5,3 +5,4 @@ Community-made customIcon-compatible icon packs
 **Want to publish a pack? [Go here](/packs)!**
 
 * [imageres.dll](/packs/imageres.dll.cIPack)
+* [YellowCollection](/packs/YellowCollection.cIPack)
