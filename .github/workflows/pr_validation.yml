@@ -1,3 +1,5 @@
+name: PR Validation
+
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -39,7 +41,11 @@ jobs:
       - name: Close invalid PR
         if: |
           !steps.pr_closed_by_workflow.outputs.result &&
-          (github.actor == github.event.pull_request.user.login || contains(github.event.pull_request.requested_reviewers.*.login, github.actor) || contains(github.event.pull_request.requested_teams.*.slug, join("/", [github.repository.owner.login, github.event.pull_request.base.ref, "moderators"])))
+          (
+            github.actor == github.event.pull_request.user.login || 
+            contains(github.event.pull_request.requested_reviewers.*.login, github.actor) || 
+            contains(github.event.pull_request.requested_teams.*.slug, join("/", [github.repository.owner.login, github.event.pull_request.base.ref, "moderators"]))
+          )
         uses: peter-evans/close-pull-request@v1
         with:
           pull_request_number: ${{ github.event.number }}
