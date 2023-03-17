@@ -1,9 +1,3 @@
-[
-  {
-   "name": "imageres.dll",
-   "description": "This is one of Windows' DLL files that has icons.",
-   "author": "jbcarreon123",
-   "icon_author": "Microsoft",
-   "filename": "imageres.dll.cIPack"
-  }
-]
+USAGE:
+  /usr/bin/manifest export [-|URL|FILENAME]
+  /usr/bin/manifest import -|URL|FILENAME, ]
