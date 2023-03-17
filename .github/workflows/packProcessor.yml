@@ -67,3 +67,12 @@ jobs:
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          branch: iconPackChanges
+          commit_options: '--no-verify --signoff'
+          create_branch: true
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          branch: iconPackChanges
