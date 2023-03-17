@@ -17,7 +17,6 @@ jobs:
           echo "::error::The PR is invalid as changes are not allowed outside of packFolder."
           echo "Please fix the changes in another PR."
           gh pr create --title "Invalid PR - Changes outside packFolder" --body "This PR contains changes outside packFolder. Please fix the changes in another PR." --base "$GITHUB_HEAD_REF" --draft || true
-        continue-on-error: true
 
       - name: Check for invalid files in packFolder
         if: ${{ contains(github.event.pull_request.changed_files, 'packFolder/') && !contains(github.event.pull_request.changed_files, '.cIManifest') && !contains(github.event.pull_request.changed_files, '.ico') && !contains(github.event.pull_request.changed_files, '.txt') }}
@@ -25,7 +24,6 @@ jobs:
           echo "::error::The PR is invalid as packFolder contains files that are not .cIManifest, .ico, or .txt files."
           echo "Please fix the changes in another PR."
           gh pr create --title "Invalid PR - Invalid files in packFolder" --body "This PR contains files in packFolder that are not .cIManifest, .ico, or .txt files. Please fix the changes in another PR." --base "$GITHUB_HEAD_REF" --draft || true
-        continue-on-error: true
 
       - name: Check for .cIManifest or .ico files in packFolder
         if: ${{ contains(github.event.pull_request.changed_files, 'packFolder/') && !contains(github.event.pull_request.changed_files, '.cIManifest') && !contains(github.event.pull_request.changed_files, '.ico') }}
@@ -33,7 +31,6 @@ jobs:
           echo "::error::The PR is invalid as there are no .cIManifest or .ico files in packFolder."
           echo "Please fix the changes in another PR."
           gh pr create --title "Invalid PR - No .cIManifest or .ico files in packFolder" --body "This PR does not contain any .cIManifest or .ico files in packFolder. Please fix the changes in another PR." --base "$GITHUB_HEAD_REF" --draft || true
-        continue-on-error: true
 
       - name: Valid PR
         run: echo "The PR is valid."
