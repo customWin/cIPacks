@@ -42,7 +42,7 @@ jobs:
       - name: Append pack data to packs store
         id: append_data
         run: |
-          packname=$(packN | sed 's/cI\.//')
+          packname=$("${{ steps.find_dir.outputs.dir }}" | sed 's/cI\.//')
           manifest_file="packFolder/$packname/cIManifest.json"
           author=$(jq -r '.pack_maker' "$manifest_file")
           icon_author=$(jq -r '.maker' "$manifest_file")
@@ -55,7 +55,6 @@ jobs:
           printf "\n* [$packname](/packs/$pack_file)" >> "$GITHUB_WORKSPACE/README.md"
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
-          packN: ${{ steps.find_dir.outputs.dir }}
 
       - name: Set up packDir environment variable
         run: echo "packDir=../packDir" >> $GITHUB_ENV
