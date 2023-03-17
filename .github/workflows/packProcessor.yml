@@ -44,7 +44,7 @@ jobs:
         run: |
           packname="${{ steps.find_dir.outputs.dir }}"
           manifest_file="packFolder/$packname/cIManifest.json"
-          pack_author=$(jq -r '.pack_author' "$manifest_file")
+          author=$(jq -r '.pack_author' "$manifest_file")
           icon_author=$(jq -r '.maker' "$manifest_file")
           description=$(jq -r '.description' "$manifest_file")
           pack_file="$packname.cIPack"
