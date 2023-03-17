@@ -49,8 +49,9 @@ jobs:
           description=$(jq -r '.description' "$manifest_file")
           pack_file="$packname.cIPack"
           new_data="{\"name\":\"$packname\",\"description\":\"$description\",\"author\":\"$pack_author\",\"icon_author\":\"$icon_author\",\"filename\":\"$pack_file\"}"
-          manifestcontent=$(cat "$GITHUB_WORKSPACE/cIPackStore.json")|sed 's/.$//'
-          echo "$manifestcontent, $new_data]" > "$GITHUB_WORKSPACE/cIPackStore.json"
+          manifest_content=$(cat "$GITHUB_WORKSPACE/cIPackStore.json")|sed 's/.$//'
+          echo $manifest_content
+          echo "$manifest_content, $new_data]" > "$GITHUB_WORKSPACE/cIPackStore.json"
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
 
