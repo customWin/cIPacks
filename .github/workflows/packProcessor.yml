@@ -62,13 +62,13 @@ jobs:
       - name: Zip and move pack folder
         working-directory: packFolder
         run: |
+          name=$(echo "${{ steps.find_dir.outputs.dir }}" | sed 's/cI\.//')
           zip -r "$name.cIPack" "$name" -i "*"
           mv "$name.cIPack" ../packs/
           mv "$name" "$packDir/$name"
-        env:
-          name: "${{ steps.find_dir.outputs.dir }}"
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           token: ${{ secrets.PACKBUILDER }}
+          commit_message: ${{ github.event.head_commit.message }}
