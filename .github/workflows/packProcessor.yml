@@ -37,20 +37,6 @@ jobs:
           echo "::set-output name=packdata::$(jq -r ".[] | select(.name == \"${{ needs.build_pack.outputs.name }}\") | {name: .name, description: .description, author: .pack_maker, icon_author: .author, filename: \"${{ needs.build_pack.outputs.name }}.cIPack\"}" ${env.packsStoreFile})"
         shell: bash
 
-      - name: Set up packDir environment variable
-        run: echo "packDir=..\packDir" >> $GITHUB_ENV
-
-      - name: Zip and move pack folder
-        working-directory: packFolder
-        run: |
-          echo "$zipname $name"
-          zip -r "$zipname" "$name" -i "*"
-          mv "$zipname" ../packs/
-          mv "$name" "$packDir"
-        env:
-          zipname: "$name.cIPack"
-          name: "${{ steps.find_dir.outputs.dir }}"
-
       - name: Append pack data to packs store
         id: append_data
         run: |
@@ -64,3 +50,17 @@ jobs:
           echo "$new_data" >> "$GITHUB_WORKSPACE/$env.packsStoreFile"
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
+
+      - name: Set up packDir environment variable
+        run: echo "packDir=..\packDir" >> $GITHUB_ENV
+
+      - name: Zip and move pack folder
+        working-directory: packFolder
+        run: |
+          echo "$zipname $name"
+          zip -r "$zipname" "$name" -i "*"
+          mv "$zipname" ../packs/
+          mv "$name" "$packDir"
+        env:
+          zipname: "$name.cIPack"
+          name: "${{ steps.find_dir.outputs.dir }}"
