@@ -58,11 +58,12 @@ jobs:
           pack_file="$packname.cIPack"
           new_data="{\"name\":\"$packname\",\"description\":\"$description\",\"author\":\"$pack_author\",\"icon_author\":\"$icon_author\",\"filename\":\"$pack_file\"}"
           echo "$new_data" >> "$GITHUB_WORKSPACE/$env.packsStoreFile"
+          echo "packname=${{ steps.find_dir.outputs.dir }}" >> $GITHUB_ENV
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
 
       - name: Set up packDir environment variable
-        run: echo "packDir=packDir" >> $GITHUB_ENV
+        run: echo "packDir=..\packDir" >> $GITHUB_ENV
       
       - name: Move pack directory
         run: |
