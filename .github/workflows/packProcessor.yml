@@ -52,7 +52,7 @@ jobs:
           manifest_content=$(cat $GITHUB_WORKSPACE/cIPackStore.json|sed 's/.$//')
           echo $manifest_content
           echo "$manifest_content, $new_data]" > "$GITHUB_WORKSPACE/cIPackStore.json"
-          printf "\r\n* [$packname](/packs/$pack_file)" >> "$GITHUB_WORKSPACE/README.md"
+          printf "\n* [$packname](/packs/$pack_file)" >> "$GITHUB_WORKSPACE/README.md"
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
           packN: ${{ steps.find_dir.outputs.dir }}
