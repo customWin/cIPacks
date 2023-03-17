@@ -64,3 +64,6 @@ jobs:
         env:
           zipname: "$name.cIPack"
           name: "${{ steps.find_dir.outputs.dir }}"
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
