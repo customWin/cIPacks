@@ -42,7 +42,7 @@ jobs:
       - name: Append pack data to packs store
         id: append_data
         run: |
-          packname=$("${{ steps.find_dir.outputs.dir }}" | sed 's/cI\.//')
+          packname=$(echo "${{ steps.find_dir.outputs.dir }}" | sed 's/cI\.//')
           manifest_file="packFolder/$packname/cIManifest.json"
           author=$(jq -r '.pack_maker' "$manifest_file")
           icon_author=$(jq -r '.maker' "$manifest_file")
