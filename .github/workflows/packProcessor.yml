@@ -63,9 +63,9 @@ jobs:
         working-directory: packFolder
         run: |
           name=$(echo "${{ steps.find_dir.outputs.dir }}" | sed 's/cI\.//')
-          zip -r "$name.cIPack" "$name" -i "*"
+          zip -r "$name.cIPack" "cI.$name" -i "*"
           mv "$name.cIPack" ../packs/
-          mv "$name" "$packDir/$name"
+          mv "cI.$name" "$packDir/$name"
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
