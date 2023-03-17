@@ -63,7 +63,7 @@ jobs:
           echo "$zipname $name"
           zip -r "$zipname" "$name" -i "*"
           mv "$zipname" ../packs/
-          mv "$name" "$(packDir)/$name"
+          mv "$name" "$packDir/$name"
         env:
           zipname: "$name.cIPack"
           name: "${{ steps.find_dir.outputs.dir }}"
