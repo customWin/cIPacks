@@ -5,49 +5,35 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  validate_pr:
+  validate-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for excluded files in packFolder
-        if: "!contains(github.event.head_commit.added, '.cIManifest') && !contains(github.event.head_commit.added, '.ico') && !contains(github.event.head_commit.added, '.txt') && contains(github.event.head_commit.added, 'packFolder/')"
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check for changes outside of packFolder
+        if: ${{ !contains(github.event.pull_request.changed_files, 'packFolder/') }}
         run: |
-          echo "Invalid Pull Request! Please make sure that packFolder only contains .cIManifest, .ico, or .txt files."
-          exit 0
+          echo "::error::The PR is invalid as changes are not allowed outside of packFolder."
+          echo "Please fix the changes in another PR."
+          gh pr create --title "Invalid PR - Changes outside packFolder" --body "This PR contains changes outside packFolder. Please fix the changes in another PR." --base "$GITHUB_HEAD_REF" --draft || true
+        continue-on-error: true
 
-      - name: Check for valid files in packFolder
-        if: "contains(github.event.head_commit.added, 'packFolder/')"
+      - name: Check for invalid files in packFolder
+        if: ${{ contains(github.event.pull_request.changed_files, 'packFolder/') && !contains(github.event.pull_request.changed_files, '.cIManifest') && !contains(github.event.pull_request.changed_files, '.ico') && !contains(github.event.pull_request.changed_files, '.txt') }}
         run: |
-          echo "${{ github.event.head_commit.added }}"
-          if ! [[ "$(find "${{ github.workspace }}/${{ github.event.head_commit.added }}" -type f ! -iname '*.cIManifest' ! -iname '*.ico' ! -iname '*.txt')" ]]; then
-            echo "Invalid Pull Request! Please make sure that packFolder only contains .cIManifest, .ico, or .txt files."
-            exit 0
-          fi
+          echo "::error::The PR is invalid as packFolder contains files that are not .cIManifest, .ico, or .txt files."
+          echo "Please fix the changes in another PR."
+          gh pr create --title "Invalid PR - Invalid files in packFolder" --body "This PR contains files in packFolder that are not .cIManifest, .ico, or .txt files. Please fix the changes in another PR." --base "$GITHUB_HEAD_REF" --draft || true
+        continue-on-error: true
 
-      - name: Check for .cIManifest and .ico files
-        if: "contains(github.event.head_commit.added, '.cIManifest') || contains(github.event.head_commit.added, '.ico')"
+      - name: Check for .cIManifest or .ico files in packFolder
+        if: ${{ contains(github.event.pull_request.changed_files, 'packFolder/') && !contains(github.event.pull_request.changed_files, '.cIManifest') && !contains(github.event.pull_request.changed_files, '.ico') }}
         run: |
-          if ! [[ "$(find "${{ github.workspace }}/${{ github.event.head_commit.added }}" -type f -iname '*.cIManifest' -o -iname '*.ico')" ]]; then
-            echo "Invalid Pull Request! Please make sure that the packFolder includes a .cIManifest file and/or .ico files."
-            exit 0
-          fi
+          echo "::error::The PR is invalid as there are no .cIManifest or .ico files in packFolder."
+          echo "Please fix the changes in another PR."
+          gh pr create --title "Invalid PR - No .cIManifest or .ico files in packFolder" --body "This PR does not contain any .cIManifest or .ico files in packFolder. Please fix the changes in another PR." --base "$GITHUB_HEAD_REF" --draft || true
+        continue-on-error: true
 
-      - name: Check if PR was closed by workflow
-        id: pr_closed_by_workflow
-        uses: andstor/github-action-pr-closed-by-workflow@v1.0.1
-        with:
-          workflow_file_name: 'pr_validation.yml'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Close invalid PR
-        if: |
-          !steps.pr_closed_by_workflow.outputs.result &&
-          (
-            github.actor == github.event.pull_request.user.login || 
-            contains(github.event.pull_request.requested_reviewers.*.login, github.actor) || 
-            contains(github.event.pull_request.requested_teams.*.slug, join("/", [github.repository.owner.login, github.event.pull_request.base.ref, "moderators"]))
-          )
-        uses: peter-evans/close-pull-request@v1
-        with:
-          pull_request_number: ${{ github.event.number }}
-          message: "This pull request has been closed because it is invalid. Please open a new pull request with the required changes."
-          keep_branch: false
+      - name: Valid PR
+        run: echo "The PR is valid."
