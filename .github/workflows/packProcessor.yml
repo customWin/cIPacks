@@ -43,7 +43,7 @@ jobs:
         id: append_data
         run: |
           packname=$(echo "${{ steps.find_dir.outputs.dir }}" | sed 's/cI\.//')
-          manifest_file="packFolder/$packname/cIManifest.json"
+          manifest_file="packFolder/${{ steps.find_dir.outputs.dir }}/cIManifest.json"
           author=$(jq -r '.pack_maker' "$manifest_file")
           icon_author=$(jq -r '.maker' "$manifest_file")
           description=$(jq -r '.description' "$manifest_file")
