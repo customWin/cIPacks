@@ -67,13 +67,14 @@ jobs:
           zipname: "$name.cIPack"
           name: "${{ steps.find_dir.outputs.dir }}"
 
-      - name: Pull changes
-        run: git pull origin iconPackChanges
+      - name: Switch branch
+        run: |
+          git commit -m changes
+          git branch iconPackChanges
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          
           branch: iconPackChanges
           commit_options: '--no-verify --signoff'
           create_branch: true
