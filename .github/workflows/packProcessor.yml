@@ -12,6 +12,8 @@ env:
 jobs:
   build_pack:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -68,6 +70,7 @@ jobs:
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
+          
           branch: iconPackChanges
           commit_options: '--no-verify --signoff'
           create_branch: true
