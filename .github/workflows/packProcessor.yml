@@ -57,8 +57,14 @@ jobs:
           echo $manifest_content
           echo "$manifest_content, $new_data]" > "$GITHUB_WORKSPACE/cIPackStore.json"
           printf "\n* [$packname](/packs/$pack_file)" >> "$GITHUB_WORKSPACE/README.md"
+          echo "pauthor=$author" >> $GITHUB_ENV
+          echo "pname=$packname" >> $GITHUB_ENV
+          echo "pdesc=$description" >> $GITHUB_ENV
         env:
           packsStoreFile: ${{ env.packsStoreFile }}
+          pauthor: ${{ env.pauthor }}
+          pname: ${{ env.pname }}
+          pdesc: ${{ env.pdesc }}
 
       - name: Set up packDir environment variable
         run: echo "packDir=../packDir" >> $GITHUB_ENV
@@ -76,3 +82,11 @@ jobs:
         with:
           token: ${{ secrets.PACKBUILDER }}
           commit_message: ${{ github.event.head_commit.message }}
+          
+      - name: Send Discord webhook with embed
+        uses: appleboy/http-request@v2.2.0
+        with:
+          url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          method: POST
+          content_type: 'application/json'
+          data: '{"embeds":[{"title":"A new pack appeared!","description":"**${{ env.pname }}** by ${{ env.pauthor }}\n${{ env.pdesc }}","color":16711680}]}'
