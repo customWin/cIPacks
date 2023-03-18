@@ -31,6 +31,7 @@ jobs:
       - name: Find pushed directory
         id: find_dir
         run: |
+          echo "$(find packFolder -type d -name 'cI.*' -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2)"
           echo "::set-output name=dir::$(find packFolder -type d -name 'cI.*' -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2 | xargs basename)"
 
       - name: Get pack data
