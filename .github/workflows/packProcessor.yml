@@ -87,8 +87,9 @@ jobs:
         uses: tsickert/discord-webhook@v5.3.0
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: <@&1086188262999216201>
           embed-title: A new pack appeared!
           embed-description: |
-            "**${{ env.pname }}** by ${{ env.pauthor }}"
-            "${{ env.pdesc }}"
+            **${{ env.pname }}** by ${{ env.pauthor }}
+            ${{ env.pdesc }}
 
