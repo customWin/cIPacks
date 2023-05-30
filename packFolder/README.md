@@ -3,7 +3,7 @@ Publishing a pack is easy, but you should follow these steps
 
 ## Prerequisites
 - A icon pack in folder with a [manifest](https://github.com/customWin/customIcons/wiki/Working-with-Icon-Packs-and-cIPackStore#making-the-customiconpack-manifest)
-- A knowledge on git
+- A basic knowledge on git
 - [Forked cIPacks repo](https://github.com/customWin/cIPacks/fork)
 - And, a positive attitude
 
