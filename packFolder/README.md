@@ -9,7 +9,10 @@ Publishing a pack is easy, but you should follow these steps
 
 ## Steps
 1. With your icon pack folder, add `cI.` on the start of the folder name
-2. Either upload it, or use `git clone` to clone your forked repo into your PC
+2. Either upload it, or:
+   - clone the forked repo using `git clone`, then
+   - copy the pack folder in this directory, and
+   - use `git add` to add the folder and files. 
 3. Push it with `git commit && git push` or push it yourself if you uploaded the folder directly
 4. [Create a Pull Request!](https://github.com/customWin/cIPacks/compare)
 
